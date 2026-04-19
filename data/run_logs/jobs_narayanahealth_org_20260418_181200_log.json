@@ -1,0 +1,28 @@
+{
+  "status": "success",
+  "input_url": "https://jobs.narayanahealth.org/NH-India/viewalljobs",
+  "resolved_url": "https://jobs.narayanahealth.org/errorpage/?errortype=404",
+  "source_name": "jobs_narayanahealth_org",
+  "saved_config": {
+    "source_name": "jobs_narayanahealth_org",
+    "source_url": "https://jobs.narayanahealth.org/NH-India/viewalljobs",
+    "strategy": "playwright",
+    "listing_url": "https://jobs.narayanahealth.org/errorpage/?errortype=404",
+    "api_endpoint": "https://jobs.narayanahealth.org/services/t/l?referrer=&ctid=bbc4b0ae-81f9-4dba-833a-0d7a4dfc05b8&landing=https%3A%2F%2Fjobs.narayanahealth.org%2Ferrorpage%2F%3Ferrortype%3D404&brand=&_=1776535899786",
+    "request_method": "GET",
+    "payload_template": null,
+    "listing_selector": null,
+    "title_selector": null,
+    "link_selector": null,
+    "pagination_type": null,
+    "detail_page_enabled": true,
+    "detail_selectors": {},
+    "headers": {},
+    "metadata": {}
+  },
+  "errors": [],
+  "warnings": [],
+  "json_output_path": "C:\\Users\\saksh\\Desktop\\hospital-monitor\\hospital_job_ingestor\\data\\outputs\\jobs_narayanahealth_org_20260418_181200.json",
+  "csv_output_path": "C:\\Users\\saksh\\Desktop\\hospital-monitor\\hospital_job_ingestor\\data\\outputs\\jobs_narayanahealth_org_20260418_181200.csv",
+  "job_count": 4
+}

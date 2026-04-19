@@ -1,0 +1,201 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# =========================
+# Virtual Environments
+# =========================
+venv/
+.venv/
+env/
+ENV/
+pythonenv/
+hospitalenv/
+
+# =========================
+# Environment Variables / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+*.env
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# =========================
+# Jupyter / Notebooks
+# =========================
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# =========================
+# Testing / Coverage / Type Checking
+# =========================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.ruff_cache/
+.hypothesis/
+.cache/
+
+# =========================
+# Logs / Runtime Files
+# =========================
+*.log
+logs/
+*.pid
+*.seed
+*.out
+*.err
+*.stackdump
+
+# =========================
+# Database / Local Storage
+# =========================
+*.sqlite3
+*.db
+*.db-journal
+
+# =========================
+# ShopWave Agent Specific
+# =========================
+audit_log.json
+shopwaveenv/
+shopwave_agent.log
+architecture.png
+
+# =========================
+# Agentic AI / LLM Project Specific
+# =========================
+
+# Model / embedding caches
+models/
+checkpoints/
+embeddings/
+cache/
+.cache/
+hf_cache/
+transformers_cache/
+sentence_transformers_cache/
+
+# Hugging Face / local model artifacts
+.huggingface/
+huggingface/
+*.safetensors
+*.bin
+
+# Vector DB / Retrieval storage
+chroma/
+chromadb/
+chroma_db/
+vectorstore/
+vectorstores/
+faiss_index/
+faiss_store/
+*.faiss
+*.pkl
+*.parquet
+
+# LangChain / LlamaIndex / temp outputs
+.langchain/
+llama_index_storage/
+storage/
+persist/
+artifacts/
+outputs/
+runs/
+traces/
+trace/
+tmp/
+temp/
+
+# Prompt / agent run outputs
+conversations/
+sessions/
+memory/
+agent_logs/
+agent_runs/
+debug_outputs/
+
+# Streamlit / Gradio / app caches
+.streamlit/secrets.toml
+.gradio/
+
+# ML experiment tracking
+mlruns/
+wandb/
+tensorboard/
+tb_logs/
+events.out.tfevents.*
+
+# Scraping / browser automation
+playwright/.cache/
+playwright_cache/
+browser_data/
+user_data_dir/
+selenium_profiles/
+downloads/
+
+# API response dumps / exports
+exports/
+responses/
+scraped_data/
+raw_data/
+
+# =========================
+# Node (if frontend exists)
+# =========================
+node_modules/
+.next/
+dist-frontend/
+frontend/node_modules/
+frontend/dist/
+
+# =========================
+# OS / Misc
+# =========================
+*.bak
+*.tmp
+*.temp
