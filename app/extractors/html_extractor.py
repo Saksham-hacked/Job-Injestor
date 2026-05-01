@@ -1,8 +1,8 @@
 """HTML-based job extractor with pagination support."""
 
-import logging
+import re
 from typing import Optional
-from urllib.parse import urljoin, urlparse, urlencode, parse_qs, urlunparse
+from urllib.parse import parse_qs, parse_qsl, urlparse, urlencode, urlunparse
 
 from bs4 import BeautifulSoup
 
@@ -26,7 +26,7 @@ TITLE_SELECTORS = [
     "a.job-link", "[class*='title']",
 ]
 
-LINK_SELECTORS = ["a[href]"]
+PAGINATION_QUERY_KEYS = {"page", "p", "pg", "offset", "start", "startrow", "from"}
 
 
 def _extract_card(card, base_url: str) -> Optional[dict]:
@@ -57,7 +57,6 @@ def _extract_card(card, base_url: str) -> Optional[dict]:
 
     raw_id = None
     if job_url:
-        # try data attributes
         raw_id = card.get("data-job-id") or card.get("data-id") or card.get("id")
 
     return {
@@ -68,38 +67,100 @@ def _extract_card(card, base_url: str) -> Optional[dict]:
     }
 
 
-def _find_next_page_url(soup: BeautifulSoup, current_url: str, page_num: int) -> Optional[str]:
-    """Heuristically find the next page URL."""
-    # Try rel="next"
-    next_link = soup.find("a", rel="next")
-    if next_link and next_link.get("href"):
-        return join_url(current_url, next_link["href"])
-
-    # Try ?page= increment
+def _increment_page_query(current_url: str, page_num: int) -> Optional[str]:
     parsed = urlparse(current_url)
     qs = parse_qs(parsed.query)
-    if "page" in qs:
-        qs["page"] = [str(page_num + 1)]
-        new_query = urlencode({k: v[0] for k, v in qs.items()})
-        return urlunparse(parsed._replace(query=new_query))
-
+    for key in PAGINATION_QUERY_KEYS:
+        if key in qs:
+            qs[key] = [str(page_num + 1)]
+            new_query = urlencode({k: v[0] for k, v in qs.items()})
+            return urlunparse(parsed._replace(query=new_query))
     return None
 
 
+def _resolve_pagination_href(current_url: str, href: str) -> str:
+    """Resolve pagination hrefs, including query-fragment links like '&p=2'."""
+    href = (href or "").strip()
+    if not href:
+        return current_url
+
+    parsed = urlparse(current_url)
+
+    if href.startswith("&"):
+        base_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+        add_pairs = parse_qsl(href[1:], keep_blank_values=True)
+        merged: dict[str, str] = {}
+        for k, v in base_pairs:
+            merged[k] = v
+        for k, v in add_pairs:
+            merged[k] = v
+        return urlunparse(parsed._replace(query=urlencode(merged, doseq=False)))
+
+    if href.startswith("?"):
+        return urlunparse(parsed._replace(query=href[1:]))
+
+    return join_url(current_url, href)
+
+
+def _pagination_candidates(soup: BeautifulSoup, current_url: str, page_num: int) -> list[str]:
+    candidates: list[tuple[str, int]] = []
+
+    next_link = soup.find("a", rel="next")
+    if next_link and next_link.get("href"):
+        candidates.append((_resolve_pagination_href(current_url, next_link["href"]), 100))
+
+    inc = _increment_page_query(current_url, page_num)
+    if inc:
+        candidates.append((inc, 90))
+
+    current_parsed = urlparse(current_url)
+
+    for a in soup.find_all("a", href=True):
+        href = str(a.get("href") or "").strip()
+        if not href or href.startswith("#") or href.lower().startswith("javascript:"):
+            continue
+
+        text = " ".join((a.get_text() or "").split()).strip().lower()
+        aria = str(a.get("aria-label") or "").strip().lower()
+        cls = " ".join(a.get("class") or []).strip().lower()
+        rel = " ".join(a.get("rel") or []).strip().lower()
+
+        score = 0
+        if "next" in text or "next" in aria or "next" in cls or "next" in rel or text in {">", "»"}:
+            score += 50
+        if re.fullmatch(r"\d+", text or ""):
+            score += 20
+
+        full = _resolve_pagination_href(current_url, href)
+        parsed = urlparse(full)
+        if parsed.netloc != current_parsed.netloc:
+            continue
+
+        q = parse_qs(parsed.query)
+        if any(k.lower() in PAGINATION_QUERY_KEYS for k in q.keys()):
+            score += 30
+
+        if parsed.path == current_parsed.path and parsed.query != current_parsed.query:
+            score += 10
+
+        if score > 0:
+            candidates.append((full, score))
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for url, _ in sorted(candidates, key=lambda x: -x[1]):
+        if url == current_url or url in seen:
+            continue
+        seen.add(url)
+        ordered.append(url)
+
+    return ordered
+
+
 class HtmlExtractor(BaseExtractor):
-    """Extracts jobs from HTML using CSS selectors with basic pagination."""
+    """Extracts jobs from HTML using CSS selectors with heuristic pagination."""
 
     def extract(self, source_url: str, config: Optional[SourceConfig] = None) -> list[dict]:
-        """
-        Fetch and parse HTML to extract job listings.
-
-        Args:
-            source_url: URL to start extraction from.
-            config: Optional source config with selectors.
-
-        Returns:
-            List of raw job dicts.
-        """
         selectors = SELECTOR_CANDIDATES[:]
         if config and config.listing_selector:
             selectors = [config.listing_selector] + selectors
@@ -107,8 +168,14 @@ class HtmlExtractor(BaseExtractor):
         all_jobs: list[dict] = []
         current_url: Optional[str] = source_url
         page_num = 1
+        visited: set[str] = set()
 
         while current_url and page_num <= MAX_HTML_PAGES:
+            if current_url in visited:
+                logger.info("HtmlExtractor: already visited %s, stopping", current_url)
+                break
+            visited.add(current_url)
+
             try:
                 html, resolved = fetch_text(current_url)
                 current_url = resolved
@@ -134,7 +201,13 @@ class HtmlExtractor(BaseExtractor):
                 logger.info("HtmlExtractor: no matching cards found, stopping pagination")
                 break
 
-            next_url = _find_next_page_url(soup, current_url, page_num)
+            next_urls = _pagination_candidates(soup, current_url, page_num)
+            next_url = None
+            for u in next_urls:
+                if u not in visited:
+                    next_url = u
+                    break
+
             if next_url and next_url != current_url:
                 logger.info(f"HtmlExtractor: following next page -> {next_url}")
                 current_url = next_url

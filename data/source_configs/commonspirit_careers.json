@@ -1,0 +1,17 @@
+{
+  "source_name": "commonspirit_careers",
+  "source_url": "https://www.commonspirit.careers/search-jobs?k=&l=&orgIds=35300",
+  "strategy": "html",
+  "listing_url": "https://www.commonspirit.careers/search-jobs?k=&l=&orgIds=35300",
+  "api_endpoint": "https://www.commonspirit.careers/tracking/gettracking",
+  "request_method": "GET",
+  "payload_template": null,
+  "listing_selector": "div[class*='job']",
+  "title_selector": null,
+  "link_selector": null,
+  "pagination_type": "next_link",
+  "detail_page_enabled": false,
+  "detail_selectors": {},
+  "headers": {},
+  "metadata": {}
+}

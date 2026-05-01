@@ -1,0 +1,27 @@
+{
+  "source_name": "hcahr_darwinbox_in",
+  "source_url": "https://hcahr.darwinbox.in/ms/candidatev2/main/careers/allJobs",
+  "strategy": "api",
+  "listing_url": "https://hcahr.darwinbox.in/ms/candidatev2/main/careers/allJobs",
+  "api_endpoint": "https://hcahr.darwinbox.in/ms/candidateapi/job/alljobs?companyId=main",
+  "request_method": "POST",
+  "payload_template": {
+    "companyId": "main",
+    "page": 1,
+    "sort_option": "new",
+    "limit": 10
+  },
+  "listing_selector": null,
+  "title_selector": null,
+  "link_selector": null,
+  "pagination_type": null,
+  "detail_page_enabled": false,
+  "detail_selectors": {},
+  "headers": {
+    "Accept": "application/json, text/plain, */*",
+    "Content-Type": "application/json",
+    "Origin": "https://hcahr.darwinbox.in",
+    "Referer": "https://hcahr.darwinbox.in/ms/candidatev2/main/careers/allJobs"
+  },
+  "metadata": {}
+}
