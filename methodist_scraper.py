@@ -1,192 +1,150 @@
+
+
+
+# import asyncio
+# import random
+# import json
+# from patchright.async_api import async_playwright
+
+# async def wait_for_text_change(frame, selector, old_text):
+#     """Polls until the text at selector no longer matches old_text."""
+#     timeout = 15
+#     start_time = asyncio.get_event_loop().time()
+#     while (asyncio.get_event_loop().time() - start_time) < timeout:
+#         element = await frame.query_selector(selector)
+#         if element:
+#             current_text = await element.inner_text()
+#             if current_text.strip() != old_text.strip():
+#                 return True
+#         await asyncio.sleep(0.5)
+#     return False
+
+# async def scrape_methodist():
+#     all_jobs = []
+    
+#     async with async_playwright() as p:
+#         # Using persistent context to keep your 'human' session tokens
+#         user_data_dir = "./icims_session"
+#         browser = await p.chromium.launch_persistent_context(
+#             user_data_dir,
+#             headless=True,
+#             args=["--disable-blink-features=AutomationControlled"]
+#         )
+
+#         page = browser.pages[0]
+#         print("Landing on search...")
+#         await page.goto("https://careers-methodisthospitals.icims.com/jobs/search?ss=1", wait_until="networkidle")
+
+#         try:
+#             while True:
+#                 # 1. Re-locate the frame on every loop iteration
+#                 print(f"Accessing iframe (Jobs so far: {len(all_jobs)})...")
+#                 await page.wait_for_selector("#icims_content_iframe", timeout=30000)
+#                 iframe_handle = await page.query_selector("#icims_content_iframe")
+#                 frame = await iframe_handle.content_frame()
+                
+#                 # 2. Wait for cards to render
+#                 await frame.wait_for_selector(".iCIMS_JobCardItem", timeout=20000)
+                
+#                 # Capture current state
+#                 first_job_elem = await frame.query_selector(".iCIMS_JobCardItem h3")
+#                 first_job_before = await first_job_elem.inner_text()
+
+#                 # 3. Extract current page jobs
+#                 job_elements = await frame.query_selector_all(".iCIMS_JobCardItem")
+#                 print(f"Scraped {len(job_elements)} jobs.")
+
+#                 for element in job_elements:
+#                     title_elem = await element.query_selector("h3")
+#                     link_elem = await element.query_selector("a.iCIMS_Anchor")
+#                     if title_elem and link_elem:
+#                         all_jobs.append({
+#                             "Title": (await title_elem.inner_text()).strip(),
+#                             "URL": await link_elem.get_attribute("href")
+#                         })
+
+#                 # 4. Pagination
+#                 await frame.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+#                 await asyncio.sleep(1)
+
+#                 next_btn = await frame.query_selector("a:has(.halflings-menu-right)")
+
+#                 if next_btn:
+#                     is_invisible = await next_btn.evaluate("node => node.classList.contains('invisible')")
+                    
+#                     if not is_invisible:
+#                         print("Clicking Next...")
+#                         await next_btn.evaluate("node => node.click()")
+                        
+#                         # 5. WAIT FOR CONTEXT RESET
+#                         # Instead of checking text change immediately, we wait for the 
+#                         # iframe to either reload or change content.
+#                         print("Waiting for page update...")
+#                         await asyncio.sleep(5) 
+                        
+#                         # We don't use 'wait_for_text_change' here because the 
+#                         # next loop iteration will re-locate the frame anyway.
+#                         continue 
+#                     else:
+#                         print("Reached final page.")
+#                         break
+#                 else:
+#                     break
+#         except Exception as e:
+#             print(f"Error: {e}")
+
+#         finally:
+#             with open("methodist_jobs.json", "w", encoding="utf-8") as f:
+#                 json.dump(all_jobs, f, indent=2, ensure_ascii=False)
+#             print(f"\nScrape Finished. Total jobs saved: {len(all_jobs)}")
+#             await browser.close()
+
+# if __name__ == "__main__":
+#     asyncio.run(scrape_methodist())
+
+
 import asyncio
-import json
-import re
-from bs4 import BeautifulSoup
 from patchright.async_api import async_playwright
 
-OUTPUT_FILE = "methodist_jobs.json"
-MAX_CONCURRENT_REQUESTS = 5
-BASE_URL = "https://careers-methodisthospitals.icims.com"
-# iCIMS uses 'pr=' for pagination (0=Page 1, 1=Page 2, etc.)
-SEARCH_URL = f"{BASE_URL}/jobs/search?ss=1&searchRelation=keyword_all&pr="
-
-async def fetch_job_details(context, job: dict, semaphore: asyncio.Semaphore) -> dict:
-    """Fetches full description and Req ID from the job's individual page."""
-    async with semaphore:
-        url = job.get("Job URL")
-        if not url: return job
-        
-        page = await context.new_page()
-        try:
-            # Block heavy assets to focus on text content
-            await page.route("**/*.{png,jpg,jpeg,gif,svg,css,woff2}", lambda route: route.abort())
-            
-            # Use 'domcontentloaded' for speed
-            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            
-            # iCIMS detail pages are also often inside the iframe
-            frame = page.frame(name="icims_content_iframe") or page.main_frame
-            await frame.wait_for_selector(".iCIMS_JobContent", timeout=10000)
-            
-            content = await frame.content()
-            soup = BeautifulSoup(content, "lxml")
-            
-            # Extract main description text
-            jd_body = soup.select_one(".iCIMS_JobDetail")
-            if jd_body:
-                job["Full Description"] = jd_body.get_text(separator="\n", strip=True)
-            
-            # Extract Req ID if available
-            req_id_elem = soup.find(string=re.compile(r"ID\s*\d+"))
-            if req_id_elem:
-                match = re.search(r"(\d+)", str(req_id_elem))
-                if match: job["Req ID"] = match.group(1)
-
-        except Exception as e:
-            print(f"  [!] Detail Error at {url}: {e}")
-        finally:
-            await page.close()
-        return job
-
-async def scrape_methodist():
-    all_jobs = []
-    current_page = 0 
-    
+async def diagnostic_scrape(url):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        # We start FRESH - no session folder for this specific test
+        # To see if the session is actually what's causing the block
+        browser = await p.chromium.launch(headless=False)
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         )
-
-        # print("--- PHASE 1: Indexing iCIMS Portal ---")
-        # page = await context.new_page()
-        
-        # while True:
-        #     target_url = f"{SEARCH_URL}{current_page}"
-        #     print(f"Fetching Page {current_page + 1}...")
-            
-        #     await page.goto(target_url, wait_until="networkidle")
-            
-        #     # Access the specific iframe identified in image_e3d753.jpg
-        #     print("Available frames:", [f.name for f in page.frames])
-        #     frame = page.frame(name="icims_content_iframe")
-        #     if not frame:
-        #         print("Could not locate iCIMS iframe. Ending search.")
-        #         break
-
-        #     # Wait for the specific job table container to load
-        #     try:
-        #         await frame.wait_for_selector(".iCIMS_JobsTable", timeout=15000)
-        #     except:
-        #         print("No more jobs found or page failed to render.")
-        #         break
-
-        #     html = await frame.content()
-        #     soup = BeautifulSoup(html, "lxml")
-        #     job_rows = soup.select(".iCIMS_JobsTable .row")
-            
-        #     if not job_rows:
-        #         break
-
-        #     for row in job_rows:
-        #         link_tag = row.select_one("a.iCIMS_Anchor")
-        #         if not link_tag: continue
-                
-        #         # Standard iCIMS metadata extraction
-        #         job_data = {
-        #             "Title": link_tag.get_text(strip=True),
-        #             "Job URL": link_tag['href'],
-        #             "Location": row.select_one("span[title*='Location']").parent.get_text(strip=True) 
-        #                         if row.select_one("span[title*='Location']") else "N/A"
-        #         }
-        #         all_jobs.append(job_data)
-
-        #     # Check for the presence of a 'Next' button to continue pagination
-        #     next_btn = soup.select_one("a:has(.glyphicon-chevron-right)")
-        #     if not next_btn:
-        #         break
-                
-        #     current_page += 1
-        #     await asyncio.sleep(1) # Polite delay
-        print("--- PHASE 1: Indexing iCIMS Portal ---")
         page = await context.new_page()
         
-        target_url = f"{SEARCH_URL}{current_page}"
-        print(f"Navigating to: {target_url}")
+        if "in_iframe=1" not in url:
+            url += "&in_iframe=1"
+
+        print(f"Direct Navigation to: {url}")
         
-        # 1. Navigate and wait for the network to settle
-        await page.goto(target_url, wait_until="networkidle")
-
-        # 2. Find the frame by scanning all frames for the iCIMS table
-        # This bypasses the need for the "#icims_content_iframe" ID
-        print("Scanning all frames for job data...")
-        target_frame = None
-        for frame in page.frames:
-            try:
-                # Based on image_e307e4.jpg, we look for the specific job table class
-                if await frame.locator("ul.iCIMS_JobsTable").count() > 0:
-                    target_frame = frame
-                    break
-            except:
-                continue
-
-        if not target_frame:
-            print("Could not find iCIMS table in any frame. Capturing debug info...")
-            await page.screenshot(path="no_frame_found.png")
-            # Dump HTML to see if the site is serving a 'Bot Detected' page
-            content = await page.content()
-            with open("source_dump.html", "w", encoding="utf-8") as f:
-                f.write(content)
-            return
-
-        print(f"Target frame located: {target_frame.url[:60]}...")
-
-        # 3. Wait for the list items to be visible inside the found frame
-        job_cards_locator = target_frame.locator("li.iCIMS_JobCardItem")
         try:
-            await job_cards_locator.first.wait_for(state="visible", timeout=10000)
-        except:
-            print("Frame found, but job cards never became visible.")
-            return
-
-        # 4. Extract data using selectors confirmed in image_e307e4.jpg
-        count = await job_cards_locator.count()
-        print(f"Found {count} jobs on this page.")
-
-        for i in range(count):
-            card = job_cards_locator.nth(i)
+            # We use 'commit' to catch the very first response from the server
+            response = await page.goto(url, wait_until="commit", timeout=60000)
+            print(f"Server Response Status: {response.status}")
             
-            # The title and URL are inside the 'a.iCIMS_Anchor'
-            title_link = card.locator("a.iCIMS_Anchor")
+            # Wait for 10 seconds to see if anything renders at all
+            await asyncio.sleep(10)
             
-            # Location is in the .header.right div
-            location_text = await card.locator(".header.right span:not(.sr-only)").first.inner_text()
+            content = await page.content()
+            body_text = await page.evaluate("document.body.innerText")
             
-            all_jobs.append({
-                "Title": await title_link.locator("h3").inner_text(),
-                "Job URL": await title_link.get_attribute("href"),
-                "Location": location_text.strip() if location_text else "N/A"
-            })
+            print(f"Body Text Length: {len(body_text)}")
+            print(f"Body Text Preview: {body_text[:200]}")
+            
+            with open("diagnostic_output.html", "w", encoding="utf-8") as f:
+                f.write(content)
+            
+            print("Full HTML dumped to diagnostic_output.html")
 
-        # 5. Check for 'Next' button to break/continue the while loop
-        # iCIMS 'Next' usually has the chevron-right icon
-        next_btn = target_frame.locator("a:has(.glyphicon-chevron-right)")
-        if await next_btn.count() == 0:
-            print("Reached the last page.")
-            # Set loop control variable to break here
-
-        print(f"\n--- PHASE 2: Fetching Descriptions for {len(all_jobs)} Jobs ---")
-        semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
-        tasks = [fetch_job_details(context, job, semaphore) for job in all_jobs]
-        results = await asyncio.gather(*tasks)
-
-        await browser.close()
-
-    # Save all combined results
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
-        
-    print(f"\nScraping complete. {len(results)} jobs saved to {OUTPUT_FILE}.")
+        except Exception as e:
+            print(f"Diagnostic Failed: {e}")
+        finally:
+            await browser.close()
 
 if __name__ == "__main__":
-    asyncio.run(scrape_methodist())
+    TEST_URL = "https://careers-methodisthospitals.icims.com/jobs/13198/medical-assistant-mpg-drk7055/job?in_iframe=1"
+    asyncio.run(diagnostic_scrape(TEST_URL))

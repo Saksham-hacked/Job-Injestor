@@ -1,0 +1,86 @@
+[
+  {
+    "first": "john",
+    "last": "smith",
+    "state": "ca",
+    "city": "san-diego",
+    "results": [
+      {
+        "name": "John Smith",
+        "age": "62",
+        "current_location": "San Diego, CA",
+        "past_locations": [
+          "Gresham OR",
+          "Napa CA",
+          "Phoenix AZ",
+          "Scottsdale AZ",
+          "Springfield MO"
+        ]
+      },
+      {
+        "name": "John Smith",
+        "age": "63",
+        "current_location": "San Diego, CA",
+        "past_locations": [
+          "Auburn CA",
+          "La Jolla CA",
+          "Saint Petersburg FL",
+          "St Petersburg FL"
+        ]
+      },
+      {
+        "name": "John Smith",
+        "age": "88",
+        "current_location": "Wilson, WY",
+        "past_locations": [
+          "Hinsdale IL",
+          "Incline Village NV",
+          "Jackson WY",
+          "Lafayette CA",
+          "Lake Forest IL"
+        ]
+      }
+    ]
+  },
+  {
+    "first": "saksham",
+    "last": "kaushish",
+    "state": "mn",
+    "city": "kandiyohi",
+    "results": [
+      {
+        "name": "Deepti Kaushish",
+        "age": "46",
+        "current_location": "Durham, NC",
+        "past_locations": [
+          "Apex NC",
+          "Cary NC",
+          "Fuquay Varina NC",
+          "Little Canada MN",
+          "Wake Forest NC"
+        ]
+      },
+      {
+        "name": "Saurabh Kaushish",
+        "age": "39",
+        "current_location": "Muskogee, OK",
+        "past_locations": [
+          "Little Canada MN",
+          "Saint Paul MN"
+        ]
+      },
+      {
+        "name": "Deepti Kaushish",
+        "age": "46",
+        "current_location": "Durham, NC",
+        "past_locations": [
+          "Apex NC",
+          "Cary NC",
+          "Fuquay Varina NC",
+          "Little Canada MN",
+          "Wake Forest NC"
+        ]
+      }
+    ]
+  }
+]
