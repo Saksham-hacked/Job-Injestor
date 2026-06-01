@@ -471,10 +471,10 @@ UA_FILE = "user_agent.txt"
 
 # Proxy Config
 PROXY_HOST = "geo.iproyal.com"
-PROXY_PORT = 11202
-PROXY_USER = "16H4QGoZ0UmnaEB4"
+PROXY_PORT = 1
+PROXY_USER = "16H4QGo"
 PROXY_SESSION_ID = "my_static_session_123" 
-PROXY_PASS = f"q1dYSNtI0heQXxRA_country-us_state-arizona_streaming-1_session-{PROXY_SESSION_ID}"
+PROXY_PASS = f"q1dYSNtI-arizona_streaming-1_session-{PROXY_SESSION_ID}"
 
 PROXY_CONFIG = {
     "server": f"http://{PROXY_HOST}:{PROXY_PORT}",
